@@ -41,7 +41,13 @@ tfidf_vectorizer = joblib.load('tfidf_vectorizer.joblib')
 item_user_matrix = joblib.load('item_user_matrix.joblib') # Assuming item-based is best
 user_item_matrix = joblib.load('user_item_matrix.joblib')
 
-def preprocess_text(text):
+# --- Preprocessing Function 
+nltk.download('stopwords', quiet=True) # Download if not already present, suppress output
+nltk.download('wordnet', quiet=True)
+lemmatizer = WordNetLemmatizer()
+stop_words = set(stopwords.words('english'))
+
+def preprocess_text_for_app(text):
     if isinstance(text, str):
         text = text.lower()
         text = re.sub(r'[^\w\s]', '', text)
@@ -53,16 +59,10 @@ def preprocess_text(text):
 
 
 # Load the original dataframe (for product names, reviews, etc.)
-df = pd.read_csv('sample30.csv')
+df = pd.read_csv('./sample30.csv')
 
 # Make sure preprocessing is consistent
-df['processed_reviews_text'] = df['reviews_text'].apply(lambda text: preprocess_text(text) if isinstance(text, str) else "") 
-
-# --- Preprocessing Function (reuse from step 1) ---
-nltk.download('stopwords', quiet=True) # Download if not already present, suppress output
-nltk.download('wordnet', quiet=True)
-lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words('english'))
+df['processed_reviews_text'] = df['reviews_text'].apply(lambda text: preprocess_text_for_app(text) if isinstance(text, str) else "") 
 
 #define the item based recommendations function
 def item_based_recommendations(item_user_matrix, username, num_recommendations=20):
@@ -100,8 +100,15 @@ def filter_recommendations_by_sentiment(recommended_products, sentiment_model, t
         tfidf_reviews = tfidf_vectorizer.transform(product_reviews)
         sentiments = sentiment_model.predict(tfidf_reviews)
 
-        positive_sentiment_count = sum(1 for sentiment in sentiments if sentiment == 'Positive')
-        sentiment_score = positive_sentiment_count / len(sentiments) if sentiments else 0
+        positive_sentiment_count = sum(1 for sentiment in sentiments if sentiment == 1)
+        sentiment_len = len(sentiments)
+
+        #if the sentiment length > 0 then store the sentiment score
+        if sentiment_len > 0:
+            sentiment_score = positive_sentiment_count / sentiment_len
+        else:
+            sentiment_score = 0
+
         product_sentiment_scores[product_name] = sentiment_score
 
     sorted_products_by_sentiment = sorted(product_sentiment_scores.items(), key=lambda item: item[1], reverse=True)
@@ -126,6 +133,8 @@ def index():
         else:
             recommendations = ["Username not found in review data."]
 
+    print("render_template is being called")
+    print(recommendations)
     return render_template('index.html', recommendations=recommendations)
 
 #run the application
