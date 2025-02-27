@@ -3,29 +3,29 @@
 <head>
     <title>Product Recommendation System</title>
     <style>
-        /* Basic Reset and Body Styling */
+        /* --- CSS Styles (same as before, with tab styles added) --- */
         body {
-            font-family: 'Arial', sans-serif; /* Modern, clean font */
+            font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4; /* Light grey background */
-            color: #333; /* Dark grey text color for readability */
-            line-height: 1.6; /* Improved text spacing */
+            background-color: #f4f4f4;
+            color: #333;
+            line-height: 1.6;
         }
 
         .container {
-            width: 80%; /* Adjust width as needed */
-            max-width: 960px; /* Maximum width for larger screens */
-            margin: 20px auto; /* Center container on the page */
+            width: 80%;
+            max-width: 960px;
+            margin: 20px auto;
             padding: 20px;
-            background-color: #fff; /* White container background */
-            border-radius: 8px; /* Rounded corners for container */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         h1 {
             text-align: center;
-            color: #0056b3; /* Primary brand color (adjust to your preference) */
+            color: #0056b3;
             margin-bottom: 20px;
         }
 
@@ -35,57 +35,93 @@
             margin-bottom: 10px;
         }
 
+        /* --- Tab Styles --- */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ccc; /* Separator line for tabs */
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background-color: #eee; /* Default tab background */
+            color: #555;
+            border: none;
+            border-radius: 8px 8px 0 0; /* Rounded top corners */
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            margin-right: 5px; /* Spacing between tabs */
+        }
+
+        .tab-button.active {
+            background-color: #0056b3; /* Active tab background */
+            color: white;
+        }
+
+        .tab-button:hover {
+            background-color: #ddd; /* Slightly darker on hover */
+        }
+
+        .tab-content {
+            display: none; /* Initially hide all tab contents */
+            padding: 20px;
+            border-top: none; /* Remove top border as tabs are above */
+        }
+
+        .tab-content.active {
+            display: block; /* Show active tab content */
+        }
+
         form {
             margin-bottom: 20px;
-            display: flex; /* Use flexbox for form layout */
-            align-items: center; /* Vertically align items in form */
+            display: flex;
+            align-items: center;
         }
 
         label {
             margin-right: 10px;
             font-weight: bold;
-            color: #555; /* Slightly lighter grey for labels */
+            color: #555;
         }
 
         input[type="text"] {
             padding: 10px;
-            border: 1px solid #ccc; /* Light grey border for input */
-            border-radius: 4px; /* Rounded corners for input */
-            flex-grow: 1; /* Input takes up available space */
-            margin-right: 10px; /* Space between input and button */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            flex-grow: 1;
+            margin-right: 10px;
         }
 
         button[type="submit"] {
             padding: 10px 20px;
-            background-color: #0056b3; /* Primary button color */
+            background-color: #0056b3;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s ease; /* Smooth hover effect */
+            transition: background-color 0.3s ease;
         }
 
         button[type="submit"]:hover {
-            background-color: #003380; /* Darker shade on hover */
+            background-color: #003380;
         }
 
         ul {
-            list-style: none; /* Remove default bullet points */
+            list-style: none;
             padding: 0;
         }
 
         ul li {
             padding: 10px;
-            border-bottom: 1px solid #eee; /* Very light grey separator lines */
+            border-bottom: 1px solid #eee;
         }
 
         ul li:last-child {
-            border-bottom: none; /* Remove border from the last item */
+            border-bottom: none;
         }
 
-        /* Message styling (e.g., "User not found") */
         ul li.message {
-            color: #777; /* Muted color for messages */
+            color: #777;
             font-style: italic;
         }
     </style>
@@ -94,24 +130,87 @@
     <div class="container">
         <h1>Product Recommendation System</h1>
 
-        <form method="post">
-            <label for="username">Enter Username:</label>
-            <input type="text" id="username" name="username" required placeholder="e.g., user123">
-            <button type="submit">Get Recommendations</button>
-        </form>
+        <div class="tabs">
+            <button class="tab-button {% if recommendation_type != 'item_based' %}active{% endif %}" onclick="openTab('user-based')">User-Based Recommendation</button>
+            <button class="tab-button {% if recommendation_type == 'item_based' %}active{% endif %}" onclick="openTab('item-based')">Item-Based Recommendation</button>
+        </div>
 
-        <h2>Recommended Products:</h2>
-        <ul>
-            {% for product in recommendations %}
-                <li>{{ product }}</li>
-            {% else %}
-                {% if recommendations %}
-                    <li class="message">No recommendations found or error.</li>
+        <!-- User-Based Recommendation Tab Content -->
+        <div id="user-based" class="tab-content {% if recommendation_type != 'item_based' %}active{% endif %}">
+            <form method="post">
+                <input type="hidden" name="recommendation_type" value="user_based"> <!-- Hidden input for type -->
+                <label for="username-user-based">Enter Username:</label>
+                <input type="text" id="username-user-based" name="username" required placeholder="e.g., user123">
+                <button type="submit">Get User-Based Recommendations</button>
+            </form>
+            <h2>User-Based Recommendations:</h2>
+            <ul>
+                {% for product in user_based_recommendations %}
+                    <li>{{ product }}</li>
                 {% else %}
-                    <li class="message">Enter a username to get recommendations.</li>
-                {% endif %}
-            {% endfor %}
-        </ul>
+                    {% if user_based_recommendations %}
+                        <li class="message">No user-based recommendations found or error.</li>
+                    {% else %}
+                        <li class="message">Enter a username to get user-based recommendations.</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Item-Based Recommendation Tab Content -->
+        <div id="item-based" class="tab-content {% if recommendation_type == 'item_based' %}active{% endif %}">
+            <form method="post">
+                <input type="hidden" name="recommendation_type" value="item_based"> <!-- Hidden input for type -->
+                <label for="username-item-based">Enter Username:</label>
+                <input type="text" id="username-item-based" name="username" required placeholder="e.g., user123">
+                <button type="submit">Get Item-Based Recommendations</button>
+            </form>
+            <h2>Item-Based Recommendations:</h2>
+            <ul>
+                {% for product in item_based_recommendations %}
+                    <li>{{ product }}</li>
+                {% else %}
+                    {% if item_based_recommendations %}
+                        <li class="message">No item-based recommendations found or error.</li>
+                    {% else %}
+                        <li class="message">Enter a username to get item-based recommendations.</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
     </div>
+
+    <script>
+        function openTab(tabName) {
+            var i, tabContent, tabButtons;
+            tabContent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabContent.length; i++) {
+                tabContent[i].style.display = "none";
+            }
+            tabButtons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].className = tabButtons[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            // Add 'active' class to the clicked button (using classList for better compatibility)
+            if (tabName === 'user-based') {
+                document.querySelector('.tab-button:nth-child(1)').classList.add('active');
+                document.querySelector('.tab-button:nth-child(2)').classList.remove('active');
+            } else if (tabName === 'item-based') {
+                document.querySelector('.tab-button:nth-child(2)').classList.add('active');
+                document.querySelector('.tab-button:nth-child(1)').classList.remove('active');
+            }
+        }
+
+        // Set default tab to 'user-based' on page load (or based on recommendation_type from backend)
+        document.addEventListener('DOMContentLoaded', function() {
+            var initialTab = "{{ recommendation_type }}"; // Get recommendation_type from backend
+            if (initialTab === 'item_based') {
+                openTab('item-based');
+            } else {
+                openTab('user-based'); // Default to user-based if not item-based or not set
+            }
+        });
+    </script>
 </body>
 </html>

@@ -38,11 +38,11 @@ app = Flask(__name__)
 # Load the saved models, vectorizer, and matrices
 sentiment_model = joblib.load('sentiment_model.joblib')
 tfidf_vectorizer = joblib.load('tfidf_vectorizer.joblib')
-item_user_matrix = joblib.load('item_user_matrix.joblib') # Assuming item-based is best
+item_user_matrix = joblib.load('item_user_matrix.joblib') 
 user_item_matrix = joblib.load('user_item_matrix.joblib')
 
 # --- Preprocessing Function 
-nltk.download('stopwords', quiet=True) # Download if not already present, suppress output
+nltk.download('stopwords', quiet=True) 
 nltk.download('wordnet', quiet=True)
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
@@ -88,6 +88,29 @@ def item_based_recommendations(item_user_matrix, username, num_recommendations=2
     recommended_products = df[df['id'].isin(recommended_item_ids)]['name'].unique().tolist()
     return recommended_products[:num_recommendations]
 
+def user_based_recommendations(user_item_matrix, username, num_recommendations=20):
+    if username not in user_item_matrix.index:
+        return "User not found."
+
+    user_similarity = cosine_similarity(user_item_matrix)
+    user_similarity_df = pd.DataFrame(user_similarity, index=user_item_matrix.index, columns=user_item_matrix.index)
+
+    similar_users = user_similarity_df[username].sort_values(ascending=False).index[1:]
+    user_ratings = user_item_matrix.loc[username]
+    rated_items = user_ratings[user_ratings > 0].index.tolist()
+
+    recommendations = {}
+    for similar_user in similar_users:
+        similar_user_ratings = user_item_matrix.loc[similar_user]
+        items_to_recommend = similar_user_ratings[~similar_user_ratings.index.isin(rated_items) & (similar_user_ratings > 0)]
+        for item_id, rating in items_to_recommend.items():
+            recommendations[item_id] = recommendations.get(item_id, 0) + rating * user_similarity_df.loc[username, similar_user]
+
+    sorted_recommendations = sorted(recommendations.items(), key=lambda item: item[1], reverse=True)
+    recommended_item_ids = [item[0] for item in sorted_recommendations[:num_recommendations]]
+    recommended_products = df[df['id'].isin(recommended_item_ids)]['name'].unique().tolist()
+    return recommended_products[:num_recommendations]
+
 #define the filtered recommendation based on sentiments
 def filter_recommendations_by_sentiment(recommended_products, sentiment_model, tfidf_vectorizer, review_df, top_n=5):
     product_sentiment_scores = {}
@@ -118,24 +141,44 @@ def filter_recommendations_by_sentiment(recommended_products, sentiment_model, t
 #define the entry point of the API
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    recommendations = []
+    user_based_recommendations_list = []
+    item_based_recommendations_list = []
+    recommendation_type = None # To track which tab was active
+
     if request.method == 'POST':
         username = request.form['username']
-        if username in item_user_matrix.columns: # Check if username exists in the data
-            initial_recommendations = item_based_recommendations(item_user_matrix, username, num_recommendations=20)
-            if isinstance(initial_recommendations, str) and initial_recommendations == "User not found.":
-                recommendations = ["User not found in recommendation system."]
-            else:
-                top_5_products = filter_recommendations_by_sentiment(
-                    initial_recommendations, sentiment_model, tfidf_vectorizer, df, top_n=5
-                )
-                recommendations = top_5_products
-        else:
-            recommendations = ["Username not found in review data."]
+        recommendation_type = request.form.get('recommendation_type') # Get recommendation type from form
 
-    print("render_template is being called")
-    print(recommendations)
-    return render_template('index.html', recommendations=recommendations)
+        if recommendation_type == 'user_based':
+            if username in user_item_matrix.index:
+                initial_recommendations_user = user_based_recommendations(user_item_matrix, username, num_recommendations=20)
+                if not isinstance(initial_recommendations_user, str) or initial_recommendations_user != "User not found.":
+                    user_based_recommendations_list = filter_recommendations_by_sentiment(
+                        initial_recommendations_user, sentiment_model, tfidf_vectorizer, df, top_n=5
+                    )
+                else:
+                    user_based_recommendations_list = [initial_recommendations_user] # "User not found." message
+            else:
+                user_based_recommendations_list = ["Username not found in user-based data."]
+
+        elif recommendation_type == 'item_based':
+            if username in item_user_matrix.columns:
+                initial_recommendations_item = item_based_recommendations(item_user_matrix, username, num_recommendations=20)
+                if not isinstance(initial_recommendations_item, str) or initial_recommendations_item != "User not found.":
+                    item_based_recommendations_list = filter_recommendations_by_sentiment(
+                        initial_recommendations_item, sentiment_model, tfidf_vectorizer, df, top_n=5
+                    )
+                else:
+                    item_based_recommendations_list = [initial_recommendations_item] # "User not found." message
+            else:
+                item_based_recommendations_list = ["Username not found in item-based data."]
+
+    return render_template(
+        'index.html',
+        user_based_recommendations=user_based_recommendations_list,
+        item_based_recommendations=item_based_recommendations_list,
+        recommendation_type=recommendation_type # Pass recommendation type to template
+    )
 
 #run the application
 if __name__ == '__main__':

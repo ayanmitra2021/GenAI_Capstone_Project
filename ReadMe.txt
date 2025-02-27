@@ -11,4 +11,5 @@ How to run this application:
 1. Download all the above files in a folder.
 2. Make sure you have flask and all the other dependencies installed. 
 3. Please make sure the index.html file is located inside the /templates folder otherwise the page will not render.
-4. Go to command prompt and execute the following command "python app.py". 
+4. Make sure the sample30.csv is located in the same folder where the app.py file is available. 
+5. Go to command prompt and execute the following command "python app.py". 
